@@ -329,13 +329,13 @@ Deluge.plugins.autoremoveplus.ui.PreferencePage = Ext.extend(Ext.TabPanel, {
             },{
                 xtype: 'label',
                 margins: '5 5 0 0',
-                text: _('Min: ')
+                text: _('Remove Less than: ')
             },{
                 xtype: 'spinnerfield',
                 //anchor: '20%',
                 //margins: '0 0 0 0',
                 name: 'min',
-                fieldLabel: _('Min'),
+                fieldLabel: _('Remove Less than'),
                 value: 0.0,
                 maxValue: 10000.0,
                 minValue: 0.0,

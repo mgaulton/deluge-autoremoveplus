@@ -85,7 +85,8 @@ filter_funcs = {
     'func_added': lambda (i, t): (time.time() - t.time_added) / 86400.0,
     'func_seed_time': lambda (i, t):
         t.get_status(['seeding_time'])['seeding_time'] / 86400.0,
-    'func_seeders': lambda (i, t): t.get_status(['total_seeds'])['total_seeds']
+    'func_seeders': lambda (i, t): t.get_status(['total_seeds'])['total_seeds'],
+    'func_availability': lambda (i, t): t.get_status(['distributed_copies'])['distributed_copies']
 }
 
 sel_funcs = {
@@ -118,7 +119,7 @@ class Core(CorePluginBase):
         #  but we still have apply_now so that if the plugin is enabled
         # mid-program do_remove is still run
         self.looping_call = LoopingCall(self.do_remove)
-        deferLater(reactor, 5, self.start_looping)
+        deferLater(reactor, 300, self.start_looping)
 
     def disable(self):
         if self.looping_call.running:
@@ -152,7 +153,8 @@ class Core(CorePluginBase):
             'func_ratio': 'Ratio',
             'func_added': 'Date Added',
             'func_seed_time': 'Seed Time',
-            'func_seeders': 'Seeders'
+            'func_seeders': 'Seeders',
+            'func_availability': 'Availability'
         }
 
     @export
@@ -294,13 +296,13 @@ class Core(CorePluginBase):
         for i in torrent_ids:
             t = torrentmanager.torrents.get(i, None)
 
-            try:
-                finished = t.is_finished
-            except:
-                continue
-            else:
-                if not finished:
-                    continue
+            # try:
+            #     finished = t.is_finished
+            # except:
+            #     continue
+            # else:
+            #     if not finished:
+            #         continue
 
             try:
                 ignored = self.torrent_states[i]
@@ -400,7 +402,7 @@ class Core(CorePluginBase):
                 filter_1 = filter_funcs.get(
                     self.config['filter'],
                     _get_ratio
-                )((i, t)) >= min_val
+                )((i, t)) <= min_val
                 # Get result of second condition test
                 filter_2 = filter_funcs.get(
                     self.config['filter2'], _get_ratio
@@ -441,9 +443,17 @@ class Core(CorePluginBase):
                 if remove_cond:
                     if not remove:
                         self.pause_torrent(t)
+                        log.warn(
+                            "AutoRemovePlus: Pause torrent %s, %s, %s, %.3f"
+                            % (i, t.get_status(['name'])['name'], t.get_status(['distributed_copies'])['distributed_copies'], (time.time() - t.time_added) / 86400.0)
+                    )
                     else:
                         if self.remove_torrent(torrentmanager, i, remove_data):
                             changed = True
+                            log.warn(
+                                "AutoRemovePlus: Delete torrent %s, %s, %s, %.3f"
+                                % (i, t.get_status(['name'])['name'], t.get_status(['distributed_copies'])['distributed_copies'], (time.time() - t.time_added) / 86400.0)
+                            )
 
         # If a torrent exemption state has been removed save changes
         if changed:
